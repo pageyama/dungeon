@@ -9,9 +9,90 @@ export type Config = {
   maxArea: number;
 };
 
-export type DungeonMap = {
-  map: TileType[][];
-  rooms: Rect[];
+export type Room = {
+  id: number;
+  top: number;
+  left: number;
+  bottom: number;
+  right: number;
+};
+
+export type TilePosition = {
+  col: number,
+  row: number,
+}
+
+export class DungeonMap {
+  public readonly map: TileType[][];
+  public readonly rooms: Room[];
+
+  public constructor(map: TileType[][], rooms: Room[]) {
+    this.map = map;
+    this.rooms = rooms;
+  }
+
+  public isWall(x: number, y: number, tileSize: number): boolean {
+
+    try {
+      var {col, row} = this.findRowColByPos(x, y, tileSize);
+    } catch(e) {
+      throw e;
+    }
+
+    const cell = this.map[row][col];
+    return cell == 'wall' || cell == 'area_wall';
+  }
+
+  public choiceRandomFloor(exclude: number[] = []) : TilePosition {
+
+    const targetRooms = this.rooms.filter(r => !exclude.includes(r.id));
+
+    const room = targetRooms[random(0, targetRooms.length)];
+
+    const row = random(room.top, room.bottom + 1);
+    const col = random(room.left, room.right + 1);
+
+    return {
+      col : col,
+      row : row,
+    };
+  }
+
+  public findRoomIDByPosition(x: number, y: number, tileSize: number): number {
+
+    try {
+      var {col, row} = this.findRowColByPos(x, y, tileSize);
+    } catch(e) {
+      throw e;
+    }
+
+    const room = this.rooms.find(r => {
+      return r.top <= row && row <= r.bottom && r.left <= col && col <= r.right;
+    });
+
+    if(room == null) {
+      return -1;
+    }
+
+    return room.id;
+  }
+
+  public findRowColByPos(x: number, y: number, tileSize: number): TilePosition {
+    const row = Math.floor(y / tileSize);
+    const col = Math.floor(x / tileSize);
+
+    const rowSize = this.map.length;
+    const colSize = this.map[0].length;
+
+    if(row < 0 || rowSize - 1 < row || col < 0 || colSize - 1 < col) {
+      throw new Error('not found');
+    }
+
+    return {
+      col : col,
+      row: row,
+    };
+  }
 };
 
 export class DungeonMapGenerator {
@@ -62,14 +143,21 @@ export class DungeonMapGenerator {
       }
     });
 
-    console.log(areas);
+    //console.log(areas);
 
     this.extendPath(map, areas);
 
-    return {
-      map: map,
-      rooms: areas.map(a => a.room),
-    };
+    const rooms: Room[] = areas.map((a, i)=> {
+      return {
+        id: i,
+        top: a.room.top,
+        left: a.room.left,
+        bottom: a.room.bottom,
+        right: a.room.right,
+      };
+    });
+
+    return new DungeonMap(map, rooms);
   }
 
   private newMap() : TileType[][] {
@@ -224,15 +312,6 @@ export class DungeonMapGenerator {
 
   }
 
-}
-
-export function choiceRandomFloor(rooms: Rect[]) : [number, number] {
-  const room = rooms[random(0, rooms.length)];
-
-  const row = random(room.top, room.bottom + 1);
-  const col = random(room.left, room.right + 1);
-
-  return [col, row];
 }
 
 class Rect {

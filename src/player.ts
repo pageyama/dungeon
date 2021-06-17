@@ -1,38 +1,37 @@
 import p5 from 'p5';
 import { Game } from './game';
-import { Dungeon } from './dungeon/index';
+import { SqureCollider } from './collider/squre';
 
-export class Player {
-
-  private pos: p5.Vector;
-  private vel: p5.Vector;
-  private size: number;
-  private sizeHalf: number;
+export class Player extends SqureCollider {
 
   private directions: Map<string, p5.Vector>;
 
   public constructor(x: number, y: number, size: number, speed: number) {
-    this.pos = Game.P5.createVector(x, y);
-    this.size = size;
-    this.sizeHalf = size / 2;
-    this.directions = newDirectionMap(speed);
-    this.vel = this.directions['IDLE'];
+
+    const pos = Game.P5.createVector(x, y);
+    const directions = newDirectionMap(speed);
+    const vel = directions['IDLE'];
+
+    super(pos, vel, size);
+    this.directions = directions;
   }
 
   public draw(p: p5) {
     p.push();
-
     p.noStroke();
     p.translate(this.pos.x, this.pos.y);
     p.rectMode(p.CENTER);
     p.fill('blue');
     p.rect(0, 0, this.size, this.size);
-
     p.pop();
-  }
 
-  public update(_p: p5) {
-    this.pos.add(this.vel);
+    //draw aiming line
+    p.push();
+    const v = p.createVector(p.mouseX - this.x, p.mouseY - this.y).setMag(16);
+    p.strokeWeight(4);
+    p.stroke(0, 200, 0);
+    p.line(this.x, this.y,  this.x + v.x, this.y + v.y);
+    p.pop();
   }
 
   public keyPressed(keyCode: number) {
@@ -121,67 +120,6 @@ export class Player {
         return this.directions['RIGHT'];
       }
     }
-  }
-
-  public checkCollisionWithWall(dungeon: Dungeon) {
-
-    if(this.vel.x != 0) {
-      const x = this.pos.x;
-      const y = this.pos.y - this.vel.y;
-
-      if(this.vel.x < 0) {
-        const left = x - this.sizeHalf;
-        const topLeft = dungeon.isWall(left, y - this.sizeHalf);
-        const bottomLeft = dungeon.isWall(left, y + this.sizeHalf);
-
-        if(topLeft || bottomLeft) {
-          this.pos.x += dungeon.tileSize - left % dungeon.tileSize;
-        }
-
-      } else if(this.vel.x > 0) {
-        const right = x + this.sizeHalf;
-        const topRight = dungeon.isWall(right, y - this.sizeHalf);
-        const bottomRight = dungeon.isWall(right, y + this.sizeHalf);
-
-        if(topRight || bottomRight) {
-          this.pos.x -= right % dungeon.tileSize + 1;
-        }
-      }
-
-    }
-
-    if(this.vel.y != 0) {
-      const x = this.pos.x - this.vel.x;
-      const y = this.pos.y;
-
-      if(this.vel.y < 0) {
-        const top = y - this.sizeHalf;
-        const topLeft = dungeon.isWall(x - this.sizeHalf, top);
-        const topRight = dungeon.isWall(x + this.sizeHalf, top);
-
-        if(topLeft || topRight) {
-          this.pos.y += dungeon.tileSize - top % dungeon.tileSize;
-        }
-
-      } else if(this.vel.y > 0) {
-        const bottom = y + this.sizeHalf;
-        const bottomLeft = dungeon.isWall(x - this.sizeHalf, bottom);
-        const bottomRight = dungeon.isWall(x + this.sizeHalf, bottom);
-
-        if(bottomLeft || bottomRight) {
-          this.pos.y -= bottom % dungeon.tileSize + 1;
-        }
-      }
-
-    }
-  }
-
-  public get x(): number {
-    return this.pos.x;
-  }
-
-  public get y(): number {
-    return this.pos.y;
   }
 }
 

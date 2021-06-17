@@ -1,8 +1,11 @@
 import p5 from 'p5';
+import { Dungeon } from './dungeon'
+import { DungeonMapGenerator } from './dungeon/map';
+import { Gun } from './gun';
 import { Player } from './player';
-import { Dungeon } from './dungeon/index'
-import { DungeonMapGenerator, choiceRandomFloor } from './dungeon/map';
-import { Bullet } from './bullet';
+import {Enemy} from './enemy';
+import { EnemyManager } from './enemy/manager';
+import {SqureCollider} from './collider/squre';
 
 export class Game {
 
@@ -15,9 +18,10 @@ export class Game {
     height : 640,
   };
 
-  private player: Player;
   private dungeon: Dungeon;
-  private bullets: Bullet[];
+  private gun : Gun;
+  private player: Player;
+  private enemyManager: EnemyManager;
 
   public setup(p: p5) {
     Game.P5 = p;
@@ -31,52 +35,49 @@ export class Game {
       maxArea : 6,
     });
 
-    const map = mapGenerator.generate();
+    const dungeonMap = mapGenerator.generate();
 
     const tileSize = 32;
 
-    this.dungeon = new Dungeon(map, tileSize);
+    this.dungeon = new Dungeon(dungeonMap, tileSize);
 
-    const [col, row] = choiceRandomFloor(map.rooms);
+    this.gun = new Gun();
+
+    const {col, row} = dungeonMap.choiceRandomFloor();
     this.player = new Player(col * tileSize + tileSize / 2, row * tileSize + tileSize / 2, 16, 4);
 
-    this.bullets = [];
+    this.enemyManager = new EnemyManager(5);
+
+    for(let i = 0; i < 3; i++) {
+      this.enemyManager.spawn(this.player.x, this.player.y, this.dungeon);
+    }
 
     p.createCanvas(Game.screen.width, Game.screen.height);
   }
 
   public draw(p: p5) {
-    p.background(100);
+   p.background(100);
     this.dungeon.draw(p);
     this.player.draw(p);
-
-    //draw aiming line
-    p.push();
-    const v = p.createVector(p.mouseX - this.player.x, p.mouseY - this.player.y).setMag(32);
-    p.strokeWeight(4);
-    p.stroke(255, 0, 0);
-    p.line(this.player.x, this.player.y,  this.player.x + v.x, this.player.y + v.y);
-    p.pop();
-
-    this.bullets.forEach(b => {
-      b.draw(p);
-    });
+    this.gun.draw(p);
+    this.enemyManager.draw(p);
   }
 
   public update(p: p5) {
     this.player.update(p);
-
-    this.bullets.forEach(b => {
-      b.update(p);
-    });
+    this.gun.update(p);
+    this.enemyManager.update(p);
 
     this.player.checkCollisionWithWall(this.dungeon);
-
-    this.bullets.forEach(b => {
-      b.isAlive = !this.dungeon.isWall(b.x, b.y);
+    this.enemyManager.checkCollisionWithWall(this.dungeon);
+    this.gun.checkCollisionWithWall(this.dungeon);
+    this.gun.checkCollisionWithSqure(this.enemyManager.enemies, (s: SqureCollider) => {
+      (s as Enemy).isAlive = false;
+      this.enemyManager.spawn(this.player.x, this.player.y, this.dungeon);
     });
 
-    this.bullets = this.bullets.filter(b => b.isAlive);
+    this.gun.filterAlive();
+    this.enemyManager.filterAlive();
   }
 
   public keyPressed(keyCode: number) {
@@ -90,8 +91,6 @@ export class Game {
   public mousePressed() {
     const mouseX = Game.P5.mouseX;
     const mouseY = Game.P5.mouseY;
-
-    const angle = Game.P5.createVector(mouseX - this.player.x, mouseY - this.player.y).heading();
-    this.bullets.push(new Bullet(this.player.x, this.player.y, angle));
+    this.gun.shoot(this.player.x, this.player.y, mouseX, mouseY);
   }
 }
