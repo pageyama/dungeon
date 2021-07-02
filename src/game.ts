@@ -7,6 +7,8 @@ import {Enemy} from './enemy';
 import { EnemyManager } from './enemy/manager';
 import {SqureCollider} from './collider/squre';
 
+import { sample } from './random';
+
 export class Game {
 
   public static P5: p5;
@@ -43,13 +45,18 @@ export class Game {
 
     this.gun = new Gun();
 
-    const {col, row} = dungeonMap.choiceRandomFloor();
+    const areaIDs = dungeonMap.areaIDs;
+    const playerAreaID = sample(areaIDs)
+    const {col, row} = dungeonMap.choiceRandomFloor(playerAreaID);
     this.player = new Player(col * tileSize + tileSize / 2, row * tileSize + tileSize / 2, 16, 4);
 
     this.enemyManager = new EnemyManager(5);
 
     for(let i = 0; i < 3; i++) {
-      this.enemyManager.spawn(this.player.x, this.player.y, this.dungeon);
+      const spawnableAreaIDs = areaIDs.filter(id => id != playerAreaID)
+      const areaID = sample(spawnableAreaIDs)
+      const {col, row} = dungeonMap.choiceRandomFloor(areaID);
+      this.enemyManager.spawn(col, row, tileSize);
     }
 
     p.createCanvas(Game.screen.width, Game.screen.height);
@@ -68,12 +75,13 @@ export class Game {
     this.gun.update(p);
     this.enemyManager.update(p);
 
-    this.player.checkCollisionWithWall(this.dungeon);
-    this.enemyManager.checkCollisionWithWall(this.dungeon);
-    this.gun.checkCollisionWithWall(this.dungeon);
+    this.player.checkCollisionWithWall(this.dungeon.map, this.dungeon.tileSize);
+    this.enemyManager.checkCollisionWithWall(this.dungeon.map, this.dungeon.tileSize);
+    this.gun.checkCollisionWithWall(this.dungeon.map, this.dungeon.tileSize);
     this.gun.checkCollisionWithSqure(this.enemyManager.enemies, (s: SqureCollider) => {
-      (s as Enemy).isAlive = false;
-      this.enemyManager.spawn(this.player.x, this.player.y, this.dungeon);
+      const enemy = (s as Enemy);
+      enemy.isAlive = false;
+      this.enemyManager.onEnemyDies(enemy, this.dungeon.map, this.dungeon.tileSize);
     });
 
     this.gun.filterAlive();

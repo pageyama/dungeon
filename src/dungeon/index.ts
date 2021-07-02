@@ -41,9 +41,11 @@ export class Dungeon {
 
         p.rect(this.tileSize * col, this.tileSize * row, this.tileSize, this.tileSize);
 
+        /*
         p.fill(255)
         p.textSize(8)
         p.text(col + ", " + row , col * this.tileSize, row * this.tileSize + this.tileSize / 2);
+        */
       }
     }
 

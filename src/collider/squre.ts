@@ -1,6 +1,6 @@
 import p5 from 'p5';
 import { Actor } from '../actor';
-import { Dungeon } from '../dungeon';
+import { DungeonMap } from '../dungeon/map';
 
 export class SqureCollider extends Actor{
 
@@ -14,7 +14,7 @@ export class SqureCollider extends Actor{
     this.sizeHalf = size / 2;
   }
 
-  public checkCollisionWithWall(dungeon: Dungeon) : [boolean, boolean] {
+  public checkCollisionWithWall(map: DungeonMap, tileSize: number) : [boolean, boolean] {
 
     let r : [boolean, boolean] = [false, false];
 
@@ -22,20 +22,20 @@ export class SqureCollider extends Actor{
       const y = this.pos.y - this.vel.y;
 
       if(this.vel.x < 0) {
-        const topLeft = dungeon.map.isWall(this.left, y - this.sizeHalf, dungeon.tileSize);
-        const bottomLeft = dungeon.map.isWall(this.left, y + this.sizeHalf, dungeon.tileSize);
+        const topLeft = map.isWall(this.left, y - this.sizeHalf, tileSize);
+        const bottomLeft = map.isWall(this.left, y + this.sizeHalf, tileSize);
 
         if(topLeft || bottomLeft) {
-          this.pos.x += dungeon.tileSize - this.left % dungeon.tileSize;
+          this.pos.x += tileSize - this.left % tileSize;
           r[0] = true;
         }
 
       } else if(this.vel.x > 0) {
-        const topRight = dungeon.map.isWall(this.right, y - this.sizeHalf, dungeon.tileSize);
-        const bottomRight = dungeon.map.isWall(this.right, y + this.sizeHalf, dungeon.tileSize);
+        const topRight = map.isWall(this.right, y - this.sizeHalf, tileSize);
+        const bottomRight = map.isWall(this.right, y + this.sizeHalf, tileSize);
 
         if(topRight || bottomRight) {
-          this.pos.x -= this.right % dungeon.tileSize + 1;
+          this.pos.x -= this.right % tileSize + 1;
           r[0] = true;
         }
       }
@@ -46,20 +46,20 @@ export class SqureCollider extends Actor{
       const x = this.pos.x - this.vel.x;
 
       if(this.vel.y < 0) {
-        const topLeft = dungeon.map.isWall(x - this.sizeHalf, this.top, dungeon.tileSize);
-        const topRight = dungeon.map.isWall(x + this.sizeHalf, this.top, dungeon.tileSize);
+        const topLeft = map.isWall(x - this.sizeHalf, this.top, tileSize);
+        const topRight = map.isWall(x + this.sizeHalf, this.top, tileSize);
 
         if(topLeft || topRight) {
-          this.pos.y += dungeon.tileSize - this.top % dungeon.tileSize;
+          this.pos.y += tileSize - this.top % tileSize;
           r[1] = true;
         }
 
       } else if(this.vel.y > 0) {
-        const bottomLeft = dungeon.map.isWall(x - this.sizeHalf, this.bottom, dungeon.tileSize);
-        const bottomRight = dungeon.map.isWall(x + this.sizeHalf, this.bottom, dungeon.tileSize);
+        const bottomLeft = map.isWall(x - this.sizeHalf, this.bottom, tileSize);
+        const bottomRight = map.isWall(x + this.sizeHalf, this.bottom, tileSize);
 
         if(bottomLeft || bottomRight) {
-          this.pos.y -= this.bottom % dungeon.tileSize + 1;
+          this.pos.y -= this.bottom % tileSize + 1;
           r[1] = true;
         }
       }

@@ -1,3 +1,4 @@
+import { random } from '../random'
 export type TileType = 'floor' | 'wall' | 'path' | 'area_wall';
 
 export type Config = {
@@ -9,26 +10,19 @@ export type Config = {
   maxArea: number;
 };
 
-export type Room = {
-  id: number;
-  top: number;
-  left: number;
-  bottom: number;
-  right: number;
-};
-
 export type TilePosition = {
   col: number,
   row: number,
 }
 
 export class DungeonMap {
+  public tileSize: number;
   public readonly map: TileType[][];
-  public readonly rooms: Room[];
+  private areas: Area[];
 
-  public constructor(map: TileType[][], rooms: Room[]) {
+  public constructor(map: TileType[][], areas: Area[]) {
     this.map = map;
-    this.rooms = rooms;
+    this.areas = areas;
   }
 
   public isWall(x: number, y: number, tileSize: number): boolean {
@@ -43,12 +37,8 @@ export class DungeonMap {
     return cell == 'wall' || cell == 'area_wall';
   }
 
-  public choiceRandomFloor(exclude: number[] = []) : TilePosition {
-
-    const targetRooms = this.rooms.filter(r => !exclude.includes(r.id));
-
-    const room = targetRooms[random(0, targetRooms.length)];
-
+  public choiceRandomFloor(areaID: number) : TilePosition {
+    const room = this.areas.find(a => a.id == areaID).room;
     const row = random(room.top, room.bottom + 1);
     const col = random(room.left, room.right + 1);
 
@@ -58,7 +48,11 @@ export class DungeonMap {
     };
   }
 
-  public findRoomIDByPosition(x: number, y: number, tileSize: number): number {
+  public get areaIDs(): number[] {
+    return this.areas.map(a => a.id);
+  }
+
+  public findAreaIDByPosition(x: number, y: number, tileSize: number): number {
 
     try {
       var {col, row} = this.findRowColByPos(x, y, tileSize);
@@ -66,15 +60,15 @@ export class DungeonMap {
       throw e;
     }
 
-    const room = this.rooms.find(r => {
-      return r.top <= row && row <= r.bottom && r.left <= col && col <= r.right;
+    const area = this.areas.find(a => {
+      return a.room.top <= row && row <= a.room.bottom && a.room.left <= col && col <= a.room.right;
     });
 
-    if(room == null) {
+    if(area == null) {
       return -1;
     }
 
-    return room.id;
+    return area.id;
   }
 
   public findRowColByPos(x: number, y: number, tileSize: number): TilePosition {
@@ -121,7 +115,7 @@ export class DungeonMapGenerator {
 
     const map = this.newMap();
 
-    const areas = this.splitAreas(new Area(0, 0, this.col, this.row));
+    const areas = this.splitAreas(new Area(0, 0, 0, this.col, this.row));
 
     areas.forEach(a => a.randomizeRoom(this.minRoomCol, this.minRoomRow, this.roomPadding));
 
@@ -147,17 +141,7 @@ export class DungeonMapGenerator {
 
     this.extendPath(map, areas);
 
-    const rooms: Room[] = areas.map((a, i)=> {
-      return {
-        id: i,
-        top: a.room.top,
-        left: a.room.left,
-        bottom: a.room.bottom,
-        right: a.room.right,
-      };
-    });
-
-    return new DungeonMap(map, rooms);
+    return new DungeonMap(map, areas);
   }
 
   private newMap() : TileType[][] {
@@ -180,9 +164,10 @@ export class DungeonMapGenerator {
     areas.push(root);
 
     let area = root;
+    let counter = 0;
 
     while(areas.length < this.maxArea && this.isSplitable(area)) {
-      areas.push(this.splitArea(area));
+      areas.push(this.splitArea(area, ++counter));
       area = areas.reduce((a, b) => a.area > b.area ? a : b);
     }
 
@@ -193,31 +178,29 @@ export class DungeonMapGenerator {
     return area.width > this.minAreaCol * 2 || area.height > this.minAreaRow * 2;
   }
 
-  private splitArea(area: Area) : Area {
+  private splitArea(area: Area, newID: number) : Area {
 
     const vartically = area.width >= area.height && area.width > this.minAreaCol * 2;
+    const other = new Area(newID, area.left, area.top, area.width, area.height);
 
     if(vartically) {
-      let s = area.left + this.minAreaCol - 1;
-      let e = area.right - this.minAreaCol + 1;
-      let p = random(s, e);
-      const other = area.copy();
+      const s = area.left + this.minAreaCol - 1;
+      const e = area.right - this.minAreaCol + 1;
+      const p = random(s, e);
 
       area.right = p;
       other.left = p;
 
-      return other;
     } else {
-      let s = area.top + this.minAreaRow - 1;
-      let e = area.bottom - this.minAreaRow + 1;
-      let p = random(s, e);
-      const other = area.copy();
+      const s = area.top + this.minAreaRow - 1;
+      const e = area.bottom - this.minAreaRow + 1;
+      const p = random(s, e);
 
       area.bottom = p;
       other.top = p;
-
-      return other;
     }
+
+    return other;
   }
 
   private extendPath(map: TileType[][], areas: Area[]) {
@@ -373,15 +356,13 @@ class Rect {
 }
 
 class Area extends Rect {
+  public readonly id: number;
   public readonly room: Rect;
 
-  public constructor(x: number, y: number, w: number, h: number) {
+  public constructor(id: number, x: number, y: number, w: number, h: number) {
     super(x, y, w, h);
+    this.id = id;
     this.room = new Rect(x + 1, y + 1, w - 2, h - 2);
-  }
-
-  public copy(): Area {
-    return new Area(this.left, this.top, this.width, this.height);
   }
 
   public get top(): number {
@@ -431,8 +412,4 @@ class Area extends Rect {
     this.room.right = this.room.left + width - 1;
     this.room.bottom = this.room.top + height - 1;
   }
-}
-
-function random (min : number, max : number) : number {
-  return Math.floor(Math.random() * (max - min)) + min;
 }

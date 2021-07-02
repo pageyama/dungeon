@@ -1,6 +1,6 @@
 import p5 from 'p5';
 import { SqureCollider } from '../collider/squre';
-import { Dungeon } from '../dungeon';
+import { DungeonMap } from '../dungeon/map';
 
 const MAX_SPAN = 60;
 
@@ -60,8 +60,8 @@ export class Enemy extends SqureCollider{
     p.pop();
   }
 
-  public checkCollisionWithWall(dungeon: Dungeon) : [boolean, boolean] {
-    const r = super.checkCollisionWithWall(dungeon);
+  public checkCollisionWithWall(map: DungeonMap, tileSize: number) : [boolean, boolean] {
+    const r = super.checkCollisionWithWall(map, tileSize);
 
     if(r[0]) {
 

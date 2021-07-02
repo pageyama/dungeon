@@ -1,7 +1,7 @@
 import p5 from 'p5';
 import { Game } from '../game';
 import { Bullet } from './bullet';
-import { Dungeon } from '../dungeon';
+import { DungeonMap } from '../dungeon/map';
 import { SqureCollider } from '../collider/squre';
 
 export class Gun {
@@ -20,9 +20,9 @@ export class Gun {
     this.bullets.forEach(b => b.draw(p));
   }
 
-  public checkCollisionWithWall(dungeon: Dungeon) {
+  public checkCollisionWithWall(map: DungeonMap, tileSize: number) {
     this.bullets.forEach(b => {
-      b.isAlive = !dungeon.map.isWall(b.x, b.y, dungeon.tileSize);
+      b.isAlive = !map.isWall(b.x, b.y, tileSize);
     });
   }
 
